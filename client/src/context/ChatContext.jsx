@@ -8,30 +8,40 @@ const ChatContext = createContext();
 export function ChatProvider({ children }) {
   const { user } = useAuth();
   const [socket, setSocket] = useState(null);
-  const [users, setUsers] = useState([
-    { id: 'user2', name: 'John Doe' },
-    { id: 'user3', name: 'Jane Smith' },
-    { id: 'user4', name: 'Bob Johnson' }
-  ]);
+  const [users, setUsers] = useState(() => {
+    const saved = localStorage.getItem(`users_${user?.id}`);
+    return saved ? JSON.parse(saved) : [
+      { id: 'user2', name: 'John Doe', lastSeen: Date.now() },
+      { id: 'user3', name: 'Jane Smith', lastSeen: Date.now() - 3600000 },
+      { id: 'user4', name: 'Bob Johnson', lastSeen: Date.now() }
+    ];
+  });
   const [activeChat, setActiveChat] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [onlineUsers, setOnlineUsers] = useState(new Set(['user2', 'user4']));
+  const [onlineUsers, setOnlineUsers] = useState(new Set());
+  const [typingUsers, setTypingUsers] = useState(new Set());
+  const [unread, setUnread] = useState({});
 
   useEffect(() => {
     if (user) {
-      // Mock fetch users
-      // chatAPI.getUsers().then(res => setUsers(res.data));
+      // Persist users
+      localStorage.setItem(`users_${user.id}`, JSON.stringify(users));
+      
+      // Simulate online status
+      const interval = setInterval(() => {
+        const now = Date.now();
+        const online = users.filter(u => Math.random() > 0.3 || u.id === 'user2').map(u => u.id);
+        setOnlineUsers(new Set(online));
+        setUsers(users.map(u => ({ ...u, lastSeen: now })));
+      }, 10000);
 
-      const newSocket = io('http://localhost:5000');
-      setSocket(newSocket);
+      // Load chat history
+      if (activeChat) {
+        const savedMessages = localStorage.getItem(`chat_${user.id}_${activeChat.id}`);
+        if (savedMessages) setMessages(JSON.parse(savedMessages));
+      }
 
-      newSocket.emit('join', user.id);
-      newSocket.on('online_users', (onlineList) => setOnlineUsers(new Set(onlineList)));
-      newSocket.on('receive_message', (message) => {
-        setMessages((prev) => [...prev, message]);
-      });
-
-      return () => newSocket.close();
+      return () => clearInterval(interval);
     }
   }, [user]);
 

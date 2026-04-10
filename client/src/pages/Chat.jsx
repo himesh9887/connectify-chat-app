@@ -7,7 +7,7 @@ import '../App.css';
 
 function Chat() {
   const { user, logout, darkMode, toggleDarkMode } = useAuth();
-  const { users, onlineUsers, activeChat, setActiveChat, messages } = useChat();
+  const { users, onlineUsers, activeChat, setActiveChat } = useChat();
   const [search, setSearch] = useState('');
 
   const filteredUsers = users.filter(u => 
@@ -34,9 +34,15 @@ function Chat() {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <UserList users={filteredUsers} onlineUsers={onlineUsers} onSelect={setActiveChat} />
+        <UserList 
+          users={filteredUsers} 
+          onlineUsers={onlineUsers} 
+          activeChat={activeChat}
+          onSelect={setActiveChat}
+          currentUserId={user.id}
+        />
       </div>
-      <ChatWindow activeChat={activeChat} messages={messages} />
+      <ChatWindow activeChat={activeChat} />
     </div>
   );
 }

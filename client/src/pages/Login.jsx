@@ -18,20 +18,16 @@ function Login() {
     setLoading(true);
 
     try {
-      // Mock login for demo (replace with real API)
-      // const res = await authAPI.login({ email, password });
-      // login(res.data.user);
-
-      // Demo user
-      login({ id: 'user1', name: 'Demo User', email });
-
+      const res = await authAPI.login({ email, password });
+      login({ ...res.data.user, token: res.data.token });
       navigate('/chat');
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || 'Login failed. Demo: test@test.com / password');
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="auth-page">

@@ -21,16 +21,13 @@ function Register() {
     setLoading(true);
 
     try {
-      // Mock register
-      // const res = await authAPI.register(formData);
-      // login(res.data.user);
-
-      // Demo
-      login({ id: 'user1', name: formData.name, email: formData.email });
-
+      const res = await authAPI.register(formData);
+      login({ ...res.data.user, token: res.data.token });
       navigate('/chat');
     } catch (err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      setError(err.response?.data?.message || 'Registration failed. Use login with demo account for testing.');
+      // Fallback demo
+      // login({ id: 'user1', name: formData.name, email: formData.email });
     } finally {
       setLoading(false);
     }

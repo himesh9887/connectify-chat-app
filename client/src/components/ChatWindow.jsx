@@ -1,9 +1,13 @@
+import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import MessageList from './MessageList';
 import MessageInput from './MessageInput';
 import '../App.css';
 
-function ChatWindow({ activeChat, messages }) {
+function ChatWindow({ activeChat }) {
+  const { user } = useAuth();
+  const { messages, loading } = useChat();
+
   if (!activeChat) {
     return (
       <div className="chat-window no-chat">
@@ -18,9 +22,11 @@ function ChatWindow({ activeChat, messages }) {
         <div className="chat-user-info">
           <div className="avatar">{activeChat.name.charAt(0).toUpperCase()}</div>
           <span>{activeChat.name}</span>
+          <span className="online-status online"></span>
         </div>
       </div>
-      <MessageList messages={messages} />
+      <MessageList messages={messages} currentUserId={user.id} />
+      {loading && <div className="loading">Loading messages...</div>}
       <MessageInput />
     </div>
   );

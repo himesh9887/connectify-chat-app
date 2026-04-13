@@ -1,24 +1,22 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from 'react';
 
 const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
+const getSavedUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    return null;
+  }
+};
 
-  useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    const savedTheme = localStorage.getItem('darkMode');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    if (savedTheme === 'true') {
-      setDarkMode(true);
-      document.documentElement.setAttribute('data-theme', 'dark');
-    }
-    setLoading(false);
-  }, []);
+const getSavedTheme = () => localStorage.getItem('darkMode') === 'true';
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(getSavedUser);
+  const [loading] = useState(false);
+  const [darkMode, setDarkMode] = useState(getSavedTheme);
 
   useEffect(() => {
     localStorage.setItem('darkMode', darkMode);
@@ -35,7 +33,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('user');
   };
 
-  const toggleDarkMode = () => setDarkMode(!darkMode);
+  const toggleDarkMode = () => setDarkMode((current) => !current);
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading, darkMode, toggleDarkMode }}>
@@ -49,4 +47,3 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within AuthProvider');
   return context;
 }
-

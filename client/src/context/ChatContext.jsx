@@ -1,9 +1,23 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './AuthContext';
 import { chatAPI } from '../services/api';
 import { initSocket, startTyping, stopTyping, sendMessage as emitMessage } from '../services/socket';
 
 const ChatContext = createContext();
+
+const getChatKey = (userId1, userId2) => {
+  const ids = [userId1, userId2].sort();
+  return `chat_${ids[0]}_${ids[1]}`;
+};
+
+const readSavedMessages = (key) => {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '[]');
+  } catch {
+    return [];
+  }
+};
 
 export function ChatProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
@@ -19,13 +33,56 @@ export function ChatProvider({ children }) {
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // Bidirectional chat key helper
-  const getChatKey = (userId1, userId2) => {
-    const ids = [userId1, userId2].sort();
-    return `chat_${ids[0]}_${ids[1]}`;
-  };
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await chatAPI.getUsers();
+      setUsers(res.data || []);
+      setError('');
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setError('Server offline. Using cached data.');
 
-  // Initialize socket
+      const cached = localStorage.getItem(`users_${user?.id}`);
+      if (cached) setUsers(JSON.parse(cached));
+    }
+  }, [user?.id]);
+
+  const loadMessages = useCallback(async (chatId) => {
+    if (!user?.id) return;
+
+    try {
+      setLoading(true);
+      const res = await chatAPI.getMessages(chatId);
+      const loadedMessages = res.data || [];
+
+      const chatKey1 = getChatKey(user.id, chatId);
+      const chatKey2 = getChatKey(chatId, user.id);
+      const saved1 = localStorage.getItem(chatKey1);
+      const saved2 = localStorage.getItem(chatKey2);
+      const allSaved = saved1 ? readSavedMessages(chatKey1) : [];
+
+      if (saved2 && saved2 !== saved1) {
+        allSaved.push(...readSavedMessages(chatKey2));
+      }
+
+      const merged = [...new Set([...allSaved, ...loadedMessages].map((message) => JSON.stringify(message)))]
+        .map((message) => JSON.parse(message))
+        .sort((a, b) => new Date(a.timestamp || a.createdAt) - new Date(b.timestamp || b.createdAt));
+
+      setMessages(merged);
+      setError('');
+    } catch (err) {
+      console.error('Failed to load messages:', err);
+      setError('Server offline. Showing cached messages.');
+
+      const chatKey = getChatKey(user.id, chatId);
+      const saved = localStorage.getItem(chatKey);
+      setMessages(saved ? readSavedMessages(chatKey) : []);
+    } finally {
+      setLoading(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     if (user && !authLoading) {
       const newSocket = initSocket(
@@ -36,24 +93,24 @@ export function ChatProvider({ children }) {
         },
         (onlineList) => setOnlineUsers(new Set(onlineList)),
         (message) => {
-          // Handle incoming message - bidirectional storage
-          setMessages(prev => {
+          setMessages((prev) => {
             const newMessages = [...prev, message];
-            // Store bidirectionally using sorted keys
             const chatKey1 = getChatKey(user.id, message.from);
             const chatKey2 = getChatKey(message.from, message.to);
             localStorage.setItem(chatKey1, JSON.stringify(newMessages));
+
             if (message.to === user.id) {
               localStorage.setItem(chatKey2, JSON.stringify(newMessages));
             }
+
             return newMessages;
           });
         },
         (typingData) => {
           if (typingData.typing) {
-            setTypingUsers(prev => new Set([...prev, typingData.from]));
+            setTypingUsers((prev) => new Set([...prev, typingData.from]));
           } else {
-            setTypingUsers(prev => {
+            setTypingUsers((prev) => {
               const newSet = new Set(prev);
               newSet.delete(typingData.from);
               return newSet;
@@ -73,68 +130,15 @@ export function ChatProvider({ children }) {
         if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       };
     }
-  }, [user, authLoading]);
 
-  // Load messages for active chat
+    return undefined;
+  }, [user, authLoading, loadUsers]);
+
   useEffect(() => {
     if (activeChat && user) {
       loadMessages(activeChat.id);
     }
-  }, [activeChat, user]);
-
-  const loadUsers = async () => {
-    try {
-      const res = await chatAPI.getUsers();
-      setUsers(res.data || []);
-      setError('');
-    } catch (err) {
-      console.error('Failed to load users:', err);
-      setError('Server offline. Using cached data.');
-      const cached = localStorage.getItem(`users_${user?.id}`);
-      if (cached) setUsers(JSON.parse(cached));
-    }
-  };
-
-  const loadMessages = async (chatId) => {
-    try {
-      setLoading(true);
-      const res = await chatAPI.getMessages(chatId);
-      let loadedMessages = res.data || [];
-      
-      // Merge with localStorage using bidirectional key
-      const chatKey1 = getChatKey(user.id, chatId);
-      const chatKey2 = getChatKey(chatId, user.id);
-      const saved1 = localStorage.getItem(chatKey1);
-      const saved2 = localStorage.getItem(chatKey2);
-      
-      const allSaved = saved1 ? JSON.parse(saved1) : [];
-      if (saved2 && saved2 !== saved1) {
-        allSaved.push(...JSON.parse(saved2));
-      }
-      
-      // Dedupe and sort by timestamp
-      const merged = [...new Set([...allSaved, ...loadedMessages].map(m => JSON.stringify(m)))]
-        .map(m => JSON.parse(m))
-        .sort((a, b) => new Date(a.timestamp || a.createdAt) - new Date(b.timestamp || b.createdAt));
-      
-      setMessages(merged);
-      setError('');
-    } catch (err) {
-      console.error('Failed to load messages:', err);
-      setError('Server offline. Showing cached messages.');
-      
-      // Fallback to localStorage
-      const chatKey = getChatKey(user.id, chatId);
-      const saved = localStorage.getItem(chatKey);
-      if (saved) {
-        setMessages(JSON.parse(saved));
-      } else {
-        setMessages([]);
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [activeChat, user, loadMessages]);
 
   const sendMessage = useCallback((text) => {
     if (activeChat && socketConnected && text.trim()) {
@@ -142,23 +146,19 @@ export function ChatProvider({ children }) {
         from: user.id,
         to: activeChat.id,
         text: text.trim(),
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
-      // Optimistic UI update
       const tempId = Date.now();
       const optimisticMessage = { ...message, tempId, pending: true };
-      
-      setMessages(prev => {
+
+      setMessages((prev) => {
         const newMessages = [...prev, optimisticMessage];
         const chatKey = getChatKey(user.id, activeChat.id);
         localStorage.setItem(chatKey, JSON.stringify(newMessages));
         return newMessages;
       });
-      
+
       emitMessage(message);
-      
-      // Replace with real message when received back
     } else if (!socketConnected) {
       setError('Server offline. Message not sent.');
     }
@@ -166,17 +166,15 @@ export function ChatProvider({ children }) {
 
   const handleTyping = useCallback(() => {
     if (activeChat && typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    
+
     if (activeChat) {
       startTyping(activeChat.id);
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = setTimeout(() => stopTyping(activeChat.id), 1500);
     }
   }, [activeChat]);
 
   const clearError = () => setError('');
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -194,7 +192,7 @@ export function ChatProvider({ children }) {
     error,
     socketConnected,
     handleTyping,
-    clearError
+    clearError,
   };
 
   return (
@@ -210,4 +208,3 @@ export function useChat() {
   if (!context) throw new Error('useChat must be used within ChatProvider');
   return context;
 }
-

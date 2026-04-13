@@ -7,7 +7,7 @@ import Chat from './pages/Chat';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div>Loading...</div>;
+  if (loading) return <div className="loading-screen">Loading Connectify...</div>;
   return user ? children : <Navigate to="/login" />;
 }
 
@@ -30,5 +30,4 @@ function App() {
 }
 
 export default App;
-
 

@@ -1,13 +1,20 @@
-import React from 'react';
 import MessageBubble from './MessageBubble';
 import '../App.css';
 
 function MessageList({ messages, currentUserId }) {
+  if (!messages.length) {
+    return (
+      <div className="message-list">
+        <div className="message-empty">No messages yet. Say hello.</div>
+      </div>
+    );
+  }
+
   return (
     <div className="message-list">
       {messages.map((message, index) => (
         <MessageBubble
-          key={message.id || index}
+          key={message.id || message.tempId || index}
           message={message}
           isOwn={message.from === currentUserId}
         />
@@ -17,4 +24,3 @@ function MessageList({ messages, currentUserId }) {
 }
 
 export default MessageList;
-

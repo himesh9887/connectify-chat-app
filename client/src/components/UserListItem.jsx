@@ -1,25 +1,32 @@
-import React from 'react';
 import '../App.css';
 
 function UserListItem({ user, isOnline, onClick, active = false }) {
   const statusClass = isOnline ? 'online' : 'offline';
   const itemClass = active ? 'user-item active' : 'user-item';
+  const initial = user.name.charAt(0).toUpperCase();
+
+  const getStatusText = () => {
+    if (isOnline) return 'Online now';
+    if (!user.lastSeen) return 'Offline';
+
+    const lastSeen = new Date(user.lastSeen);
+    if (Number.isNaN(lastSeen.getTime())) return 'Offline';
+
+    return `Last seen ${lastSeen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  };
 
   return (
-    <div className={itemClass} onClick={onClick}>
-      <div className="user-avatar">
-        <span>{user.name.charAt(0).toUpperCase()}</span>
-        <span className={`online-status ${statusClass}`}></span>
-      </div>
-      <div className="user-details">
-        <div className="user-name">{user.name}</div>
-        <div className="user-status">
-          {isOnline ? 'Online' : `Last seen ${new Date(user.lastSeen).toLocaleTimeString()}`}
-        </div>
-      </div>
-    </div>
+    <button className={itemClass} type="button" onClick={onClick} aria-pressed={active}>
+      <span className="user-avatar">
+        <span className="avatar-initial">{initial}</span>
+        <span className={`online-status ${statusClass}`} aria-label={isOnline ? 'Online' : 'Offline'}></span>
+      </span>
+      <span className="user-details">
+        <span className="user-name">{user.name}</span>
+        <span className="user-status">{getStatusText()}</span>
+      </span>
+    </button>
   );
 }
 
 export default UserListItem;
-

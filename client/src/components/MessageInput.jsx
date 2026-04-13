@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useChat } from '../context/ChatContext';
 import '../App.css';
 
 function MessageInput() {
   const [text, setText] = useState('');
-  const { sendMessage } = useChat();
+  const { sendMessage, handleTyping, socketConnected } = useChat();
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -14,18 +14,25 @@ function MessageInput() {
     }
   };
 
+  const handleChange = (e) => {
+    setText(e.target.value);
+    handleTyping();
+  };
+
   return (
-    <form className="message-input" onSubmit={handleSubmit}>
+    <form className="message-input-container" onSubmit={handleSubmit}>
       <input
+        className="message-input"
         value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="Type a message..."
-        rows="1"
+        onChange={handleChange}
+        placeholder={socketConnected ? 'Type a message' : 'Waiting for connection'}
+        aria-label="Message"
       />
-      <button type="submit" className="send-btn">➤</button>
+      <button className="send-btn" type="submit" disabled={!text.trim()}>
+        Send
+      </button>
     </form>
   );
 }
 
 export default MessageInput;
-

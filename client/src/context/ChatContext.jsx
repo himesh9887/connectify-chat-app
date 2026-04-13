@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { chatAPI } from '../services/api';
-import { initSocket, startTyping, stopTyping } from '../services/socket';
+import { initSocket, startTyping, stopTyping, sendMessage as emitMessage } from '../services/socket';
 
 const ChatContext = createContext();
 
@@ -12,7 +12,7 @@ export function ChatProvider({ children }) {
   const [messages, setMessages] = useState([]);
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [typingUsers, setTypingUsers] = useState(new Set());
-  const [unread, setUnread] = useState({});
+  const [unread] = useState({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [socketConnected, setSocketConnected] = useState(false);
@@ -156,8 +156,7 @@ export function ChatProvider({ children }) {
         return newMessages;
       });
       
-      // Send via socket
-      initSocket(user.id).emit('send_message', message);
+      emitMessage(message);
       
       // Replace with real message when received back
     } else if (!socketConnected) {
@@ -165,7 +164,7 @@ export function ChatProvider({ children }) {
     }
   }, [activeChat, user, socketConnected]);
 
-  const handleTyping = useCallback((typing) => {
+  const handleTyping = useCallback(() => {
     if (activeChat && typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     
     if (activeChat) {

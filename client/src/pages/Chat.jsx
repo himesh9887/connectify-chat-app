@@ -7,45 +7,76 @@ import '../App.css';
 
 function Chat() {
   const { user, logout, darkMode, toggleDarkMode } = useAuth();
-  const { users, onlineUsers, activeChat, setActiveChat } = useChat();
+  const {
+    users,
+    onlineUsers,
+    activeChat,
+    setActiveChat,
+    error,
+    clearError,
+    socketConnected,
+  } = useChat();
   const [search, setSearch] = useState('');
 
-  const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(search.toLowerCase()) && u.id !== user.id
+  const filteredUsers = users.filter((candidate) =>
+    candidate.name.toLowerCase().includes(search.toLowerCase()) && candidate.id !== user.id
   );
 
   return (
     <div className="chat-app">
-      <div className="sidebar">
+      <aside className="sidebar">
         <div className="sidebar-header">
-          <h2>Connectify</h2>
-          <div className="user-info">
-            <span>{user?.name}</span>
-            <button onClick={logout}>Logout</button>
-            <button onClick={toggleDarkMode}>
-              {darkMode ? '☀️' : '🌙'}
+          <div className="brand-lockup">
+            <span className="brand-mark brand-mark-small" aria-hidden="true">C</span>
+            <div>
+              <h2>Connectify</h2>
+              <span className={socketConnected ? 'connection-status online' : 'connection-status offline'}>
+                {socketConnected ? 'Connected' : 'Offline mode'}
+              </span>
+            </div>
+          </div>
+
+          <div className="user-actions">
+            <span className="user-chip" title={user?.email || user?.name}>{user?.name}</span>
+            <button className="ghost-button" type="button" onClick={toggleDarkMode}>
+              {darkMode ? 'Light' : 'Dark'}
+            </button>
+            <button className="ghost-button" type="button" onClick={logout}>
+              Logout
             </button>
           </div>
         </div>
+
         <div className="search">
-          <input
-            placeholder="Search users..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <label>
+            <span>Search users</span>
+            <input
+              placeholder="Search by name"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
         </div>
-        <UserList 
-          users={filteredUsers} 
-          onlineUsers={onlineUsers} 
+
+        {error && (
+          <div className="connection-banner">
+            <span>{error}</span>
+            <button type="button" onClick={clearError}>Dismiss</button>
+          </div>
+        )}
+
+        <UserList
+          users={filteredUsers}
+          onlineUsers={onlineUsers}
           activeChat={activeChat}
           onSelect={setActiveChat}
           currentUserId={user.id}
         />
-      </div>
+      </aside>
+
       <ChatWindow activeChat={activeChat} />
     </div>
   );
 }
 
 export default Chat;
-

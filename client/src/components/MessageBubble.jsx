@@ -1,6 +1,6 @@
 import '../App.css';
 
-function MessageBubble({ message, isOwn }) {
+function MessageBubble({ message, isOwn, senderInitial = 'C' }) {
   const timestamp = message.timestamp || message.createdAt;
   const date = timestamp ? new Date(timestamp) : null;
   const time = date && !Number.isNaN(date.getTime())
@@ -9,6 +9,11 @@ function MessageBubble({ message, isOwn }) {
 
   return (
     <div className={isOwn ? 'message sent' : 'message received'}>
+      {!isOwn && (
+        <span className="message-avatar" aria-hidden="true">
+          {senderInitial}
+        </span>
+      )}
       <div className="message-bubble">
         <p className="message-text">{message.text}</p>
         <span className="message-time">

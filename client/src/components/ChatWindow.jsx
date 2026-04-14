@@ -13,8 +13,9 @@ function ChatWindow({ activeChat }) {
       <main className="chat-window no-chat">
         <div className="empty-state">
           <div className="empty-icon" aria-hidden="true">C</div>
+          <p className="eyebrow">Inbox ready</p>
           <h2>Your chats are ready.</h2>
-          <p>Select a person from the list and start a conversation.</p>
+          <p>Select a person and start a conversation.</p>
         </div>
       </main>
     );
@@ -22,6 +23,7 @@ function ChatWindow({ activeChat }) {
 
   const isOnline = onlineUsers.has(activeChat.id);
   const isTyping = typingUsers.has(activeChat.id);
+  const statusText = isTyping ? 'Typing...' : isOnline ? 'Online now' : 'Offline';
 
   return (
     <main className="chat-window">
@@ -32,14 +34,18 @@ function ChatWindow({ activeChat }) {
           </div>
           <div className="chat-title-block">
             <span className="chat-user-name">{activeChat.name}</span>
-            <span className={isOnline ? 'chat-user-status online' : 'chat-user-status'}>
-              {isTyping ? 'Typing...' : isOnline ? 'Online now' : 'Offline'}
+            <span className={isOnline ? 'chat-user-status online' : 'chat-user-status'} aria-live="polite">
+              <span className={isOnline ? 'status-dot online' : 'status-dot'} aria-hidden="true"></span>
+              {statusText}
             </span>
           </div>
         </div>
+        <div className="chat-header-meta">
+          <span>{messages.length} messages</span>
+        </div>
       </div>
 
-      <MessageList messages={messages} currentUserId={user.id} />
+      <MessageList messages={messages} currentUserId={user.id} activeChat={activeChat} />
       {loading && <div className="loading">Loading messages...</div>}
       <MessageInput />
     </main>

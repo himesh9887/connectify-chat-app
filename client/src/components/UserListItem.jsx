@@ -3,7 +3,7 @@ import '../App.css';
 function UserListItem({ user, isOnline, onClick, active = false }) {
   const statusClass = isOnline ? 'online' : 'offline';
   const itemClass = active ? 'user-item active' : 'user-item';
-  const initial = user.name.charAt(0).toUpperCase();
+  const initial = user.name?.charAt(0).toUpperCase() || 'U';
 
   const getStatusText = () => {
     if (isOnline) return 'Online now';
@@ -16,13 +16,13 @@ function UserListItem({ user, isOnline, onClick, active = false }) {
   };
 
   return (
-    <button className={itemClass} type="button" onClick={onClick} aria-pressed={active}>
+    <button className={itemClass} type="button" onClick={onClick} aria-pressed={active} aria-current={active ? 'true' : undefined}>
       <span className="user-avatar">
         <span className="avatar-initial">{initial}</span>
         <span className={`online-status ${statusClass}`} aria-label={isOnline ? 'Online' : 'Offline'}></span>
       </span>
       <span className="user-details">
-        <span className="user-name">{user.name}</span>
+        <span className="user-name">{user.name || 'Unknown user'}</span>
         <span className="user-status">{getStatusText()}</span>
       </span>
     </button>
